@@ -57,8 +57,8 @@ class Vocabulary:
         return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
 
     def get_tensor_for_data(self, pair):
-        input_tensor = self.sentence_to_indexes(VOCAB_MODEL, pair[0])
-        target_tensor = self.sentence_to_indexes(VOCAB_MODEL, pair[1])
+        input_tensor = self.sentence_to_indexes(pair[0])
+        target_tensor = self.sentence_to_indexes(pair[1])
         return (input_tensor, target_tensor)
 
 
@@ -92,7 +92,8 @@ def read_data_and_vocab():
 
 data , VOCAB_MODEL = read_data_and_vocab()
 
-
+data_train = data
+data_test = data
 
 class EncoderRNN(nn.Module):
     def __init__(self, input_size, hidden_size):
@@ -144,7 +145,7 @@ class AttnDecoderRNN(nn.Module):
         self.attn = nn.Linear(self.hidden_size * 2, self.max_length)
         self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
         self.dropout = nn.Dropout(self.dropout_p)
-        self.gru = nn.LSTM(self.hidden_size, self.hidden_size)
+        self.gru = nn.GRU(self.hidden_size, self.hidden_size)
         self.out = nn.Linear(self.hidden_size, self.output_size)
 
     def forward(self, input, hidden, encoder_outputs):
@@ -171,58 +172,6 @@ class AttnDecoderRNN(nn.Module):
 
 teacher_forcing_ratio = 0.5
 
-# def train_no_attn(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, max_length=MAX_LENGTH):
-#     encoder_hidden = encoder.initHidden()
-
-#     encoder_optimizer.zero_grad()
-#     decoder_optimizer.zero_grad()
-
-#     input_length = input_tensor.size(0)
-#     target_length = target_tensor.size(0)
-
-#     encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
-
-#     loss = 0
-
-#     for ei in range(input_length):
-#         encoder_output, encoder_hidden = encoder(
-#             input_tensor[ei], encoder_hidden)
-#         encoder_outputs[ei] = encoder_output[0, 0]
-
-#     decoder_input = torch.tensor([[SOS_token]], device=device)
-
-#     decoder_hidden = encoder_hidden
-
-#     use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
-
-#     if use_teacher_forcing:
-#         # Teacher forcing: Feed the target as the next input
-#         for di in range(target_length):
-#             decoder_output, decoder_hidden = decoder(
-#                 decoder_input, decoder_hidden)
-#             loss+= criterion(decoder_output, target_tensor[di])
-#             decoder_input = target_tensor[di]  # Teacher forcing
-
-#     else:
-#         # Without teacher forcing: use its own predictions as the next input
-#         for di in range(target_length):
-#             decoder_output, decoder_hidden = decoder(
-#                 decoder_input, decoder_hidden)
-#             topv, topi = decoder_output.topk(1)
-#             decoder_input = topi.squeeze().detach()  # detach from history as input
-
-#             loss += criterion(decoder_output, target_tensor[di])
-#             if decoder_input.item() == EOS_token:
-#                 break
-
-#     loss.backward()
-
-#     encoder_optimizer.step()
-#     decoder_optimizer.step()
-
-#     return loss.item() / target_length
-
-
 
 def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, max_length=MAX_LENGTH):
     encoder_hidden = encoder.initHidden()
@@ -247,23 +196,24 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
 
     use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
 
-    if use_teacher_forcing:
-        # Teacher forcing: Feed the target as the next input
-        for di in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
+    for di in range(target_length):
+        decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
+        
+        if use_teacher_forcing:
+            # Teacher forcing: Feed the target as the next input
             loss += criterion(decoder_output, target_tensor[di])
             decoder_input = target_tensor[di]  # Teacher forcing
 
-    else:
-        # Without teacher forcing: use its own predictions as the next input
-        for di in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
+        else:
+            # # Without teacher forcing: use its own predictions as the next input
+            # for di in range(target_length):
+            #     decoder_output, decoder_hidden, decoder_attention = decoder(decoder_input, decoder_hidden, encoder_outputs)
             topv, topi = decoder_output.topk(1)
             decoder_input = topi.squeeze().detach()  # detach from history as input
-
             loss += criterion(decoder_output, target_tensor[di])
-            if decoder_input.item() == EOS_token:
-                break
+
+        if decoder_input.item() == EOS_token:
+            break
 
     loss.backward()
 
@@ -296,7 +246,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
 
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
-    training_pairs = [VOCAB_MODEL.get_tensor_for_data(random.choice(pairs_train)) for i in range(n_iters)]
+    training_pairs = [VOCAB_MODEL.get_tensor_for_data(random.choice(data_train)) for i in range(n_iters)]
     criterion = nn.NLLLoss()
 
     for iter in range(1, n_iters + 1):
@@ -316,15 +266,12 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_lstm_attn_collated.pth")
-            torch.save(decoder.state_dict(), "decoder_lstm_attn_collated.pth")
+            torch.save(encoder.state_dict(), "encoder_attn_collated.pth")
+            torch.save(decoder.state_dict(), "decoder_attn_collated.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 
-        # if iter % plot_every == 0:
-        #     plot_loss_avg = plot_loss_total / plot_every
-        #     plot_losses.append(plot_loss_avg)
-        #     plot_loss_total = 0
+
 
 
 
@@ -365,53 +312,53 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
 #         return decoded_words
 
 
-# def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
-#     with torch.no_grad():
-#         input_tensor = VOCAB_MODEL.sentence_to_indexes(sentence)
-#         input_length = input_tensor.size()[0]
-#         encoder_hidden = encoder.initHidden()
+def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
+    with torch.no_grad():
+        input_tensor = VOCAB_MODEL.sentence_to_indexes(sentence)
+        input_length = input_tensor.size()[0]
+        encoder_hidden = encoder.initHidden()
 
-#         encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
+        encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
 
-#         for ei in range(input_length):
-#             encoder_output, encoder_hidden = encoder(input_tensor[ei],
-#                                                      encoder_hidden)
-#             encoder_outputs[ei] += encoder_output[0, 0]
+        for ei in range(input_length):
+            encoder_output, encoder_hidden = encoder(input_tensor[ei],
+                                                     encoder_hidden)
+            encoder_outputs[ei] += encoder_output[0, 0]
 
-#         decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
+        decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
 
-#         decoder_hidden = encoder_hidden
+        decoder_hidden = encoder_hidden
 
-#         decoded_words = []
-#         decoder_attentions = torch.zeros(max_length, max_length)
+        decoded_words = []
+        decoder_attentions = torch.zeros(max_length, max_length)
 
-#         for di in range(max_length):
-#             decoder_output, decoder_hidden, decoder_attention = decoder(
-#                 decoder_input, decoder_hidden, encoder_outputs)
-#             decoder_attentions[di] = decoder_attention.data
-#             topv, topi = decoder_output.data.topk(1)
-#             if topi.item() == EOS_token:
-#                 decoded_words.append('<EOS>')
-#                 break
-#             else:
-#                 decoded_words.append(VOCAB_MODEL.index2word[topi.item()])
+        for di in range(max_length):
+            decoder_output, decoder_hidden, decoder_attention = decoder(
+                decoder_input, decoder_hidden, encoder_outputs)
+            decoder_attentions[di] = decoder_attention.data
+            topv, topi = decoder_output.data.topk(1)
+            if topi.item() == EOS_token:
+                decoded_words.append('<EOS>')
+                break
+            else:
+                decoded_words.append(VOCAB_MODEL.index2word[topi.item()])
 
-#             decoder_input = topi.squeeze().detach()
+            decoder_input = topi.squeeze().detach()
 
-#         return decoded_words, decoder_attentions[:di + 1]
+        return decoded_words, decoder_attentions[:di + 1]
 
 
 
-# def evaluateRandomly(encoder, decoder, n=10):
-#     for i in range(n):
-#         pair = random.choice(pairs_test)
-#         print('>', pair[0])
-#         print('=', pair[1])
-#         output_words, attentions = evaluate(encoder, decoder, pair[0])
-#         #output_words = evaluate_no_attn(encoder, decoder, pair[0])
-#         output_sentence = ' '.join(output_words)
-#         print('<', output_sentence)
-#         print('')
+def evaluateRandomly(encoder, decoder, n=10):
+    for i in range(n):
+        pair = random.choice(data_test)
+        print('>', pair[0])
+        print('=', pair[1])
+        output_words, attentions = evaluate(encoder, decoder, pair[0])
+        #output_words = evaluate_no_attn(encoder, decoder, pair[0])
+        output_sentence = ' '.join(output_words)
+        print('<', output_sentence)
+        print('')
 
 
 hidden_size = 256
