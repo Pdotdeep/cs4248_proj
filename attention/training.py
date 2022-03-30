@@ -366,7 +366,7 @@ encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 attn_decoder1 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
 #attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
 print("COMMENSING TRAINING")
-trainIters(encoder1, attn_decoder1, 10000, print_every=100)
+trainIters(encoder1, attn_decoder1, 50000, print_every=100)
 
 
 
