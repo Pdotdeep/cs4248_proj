@@ -52,7 +52,7 @@ class Vocabulary:
                 self.word2count[word] += 1
 
     def sentence_to_indexes(self, sentence):
-        indexes = [self.word2index[word] for word in sentence.split(' ')]
+        indexes = [self.word2index[word] for word in sentence.split(' ') if word in self.word2index]
         indexes.append(EOS_token)
         return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
 
