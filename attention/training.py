@@ -367,14 +367,15 @@ encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 attn_decoder1 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
 #attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
 print("COMMENSING TRAINING")
-trainIters(encoder1, attn_decoder1, 50000, print_every=100)
+#trainIters(encoder1, attn_decoder1, 50000, print_every=100)
 
 
 
 #encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 #attn_decoder2 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
 #attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
-#encoder1.load_state_dict(torch.load('encoder_no_attn_collated.pth'))
-#attn_decoder1.load_state_dict(torch.load('decoder_no_attn_collated.pth'))
+encoder1.load_state_dict(torch.load('encoder_attn_collated_stacked.pth'))
+attn_decoder1.load_state_dict(torch.load('decoder_attn_collated_stacked.pth'))
 
+trainIters(encoder1, attn_decoder1, 50000, print_every=100)
 evaluateRandomly(encoder1, attn_decoder1)
