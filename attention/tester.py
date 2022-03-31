@@ -31,7 +31,7 @@ SOS_token = 0
 EOS_token = 1
 
 
-MAX_LENGTH = 600
+MAX_LENGTH = 200
 
 
 class Vocabulary:
@@ -52,7 +52,7 @@ class Vocabulary:
                 self.word2count[word] += 1
 
     def sentence_to_indexes(self, sentence):
-        indexes = [self.word2index[word] for word in sentence.split(' ') if word in self.word2index]
+        indexes = [self.word2index[word] for word in sentence.split(' ')]
         indexes.append(EOS_token)
         return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
 
@@ -69,17 +69,27 @@ def preprocessString(text):
     text = re.sub(r"[^a-zA-Z.!?]+", r" ", text)
     return text
 
-def read_data_and_vocab(data_path):
+def read_data_and_vocab():
     print("Getting Data...")
     vocab = Vocabulary()
     
     data = []
-    collated_df = pd.read_json(data_path)
+    collated_df = pd.read_json('./training_data.json')
 
     for index, row in collated_df.iterrows():
 
-        text = preprocessString(row["text"])
+        text = row["text"]
         title = preprocessString(row["title"])
+
+        sent_list = nltk.tokenize.sent_tokenize(text)
+        num_of_sentences = len(sent_list)
+        end_boundary = 3 if 3 < num_of_sentences else num_of_sentences
+        first_3_sentences = sent_list[0:end_boundary]
+
+        text = preprocessString(''.join(first_3_sentences))
+
+        # print("setences: ",text)
+        # print("ORI" ,row["text"])
 
         if(len(text.split(' ')) < MAX_LENGTH and len(title.split(' ')) < MAX_LENGTH):
             data.append([text,title])

@@ -31,7 +31,7 @@ SOS_token = 0
 EOS_token = 1
 
 
-MAX_LENGTH = 600
+MAX_LENGTH = 200
 
 
 class Vocabulary:
@@ -78,8 +78,18 @@ def read_data_and_vocab():
 
     for index, row in collated_df.iterrows():
 
-        text = preprocessString(row["text"])
+        text = row["text"]
         title = preprocessString(row["title"])
+
+        sent_list = nltk.tokenize.sent_tokenize(text)
+        num_of_sentences = len(sent_list)
+        end_boundary = 3 if 3 < num_of_sentences else num_of_sentences
+        first_3_sentences = sent_list[0:end_boundary]
+
+        text = preprocessString(''.join(first_3_sentences))
+
+        # print("setences: ",text)
+        # print("ORI" ,row["text"])
 
         if(len(text.split(' ')) < MAX_LENGTH and len(title.split(' ')) < MAX_LENGTH):
             data.append([text,title])
