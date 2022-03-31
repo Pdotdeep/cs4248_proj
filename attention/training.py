@@ -172,7 +172,6 @@ class AttnDecoderRNN(nn.Module):
 
         output = F.relu(output)
         output, hidden = self.gru(output, hidden)
-        output, hidden = self.gru(output, hidden)
 
         output = F.log_softmax(self.out(output[0]), dim=1)
         return output, hidden, attn_weights
@@ -277,8 +276,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_attn_collated_stacked.pth")
-            torch.save(decoder.state_dict(), "decoder_attn_collated_stacked.pth")
+            torch.save(encoder.state_dict(), "encoder_attn_3_sentence.pth")
+            torch.save(decoder.state_dict(), "encoder_attn_3_sentence.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 

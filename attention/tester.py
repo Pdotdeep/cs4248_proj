@@ -173,7 +173,7 @@ class AttnDecoderRNN(nn.Module):
 
         output = F.relu(output)
         output, hidden = self.gru(output, hidden)
-        output, hidden = self.gru(output, hidden)
+        # output, hidden = self.gru(output, hidden)
         output = F.log_softmax(self.out(output[0]), dim=1)
         return output, hidden, attn_weights
 
@@ -234,7 +234,7 @@ def evaluateRandomly(encoder, decoder, n=10):
 hidden_size = 128
 encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 attn_decoder1 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
-encoder1.load_state_dict(torch.load('encoder_attn_collated_stacked.pth'))
-attn_decoder1.load_state_dict(torch.load('decoder_attn_collated_stacked.pth'))
+encoder1.load_state_dict(torch.load('encoder_attn_3_sentence.pth'))
+attn_decoder1.load_state_dict(torch.load('decoder_attn_3_sentence.pth'))
 
 evaluateRandomly(encoder1, attn_decoder1)
