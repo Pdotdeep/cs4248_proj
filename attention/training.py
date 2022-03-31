@@ -31,7 +31,7 @@ SOS_token = 0
 EOS_token = 1
 
 
-MAX_LENGTH = 600
+MAX_LENGTH = 200
 
 
 class Vocabulary:
@@ -78,8 +78,18 @@ def read_data_and_vocab():
 
     for index, row in collated_df.iterrows():
 
-        text = preprocessString(row["text"])
+        text = row["text"]
         title = preprocessString(row["title"])
+
+        sent_list = nltk.tokenize.sent_tokenize(text)
+        num_of_sentences = len(sent_list)
+        end_boundary = 3 if 3 < num_of_sentences else num_of_sentences
+        first_3_sentences = sent_list[0:end_boundary]
+
+        text = preprocessString(''.join(first_3_sentences))
+
+        # print("setences: ",text)
+        # print("ORI" ,row["text"])
 
         if(len(text.split(' ')) < MAX_LENGTH and len(title.split(' ')) < MAX_LENGTH):
             data.append([text,title])
@@ -161,7 +171,6 @@ class AttnDecoderRNN(nn.Module):
         output = self.attn_combine(output).unsqueeze(0)
 
         output = F.relu(output)
-        output, hidden = self.gru(output, hidden)
         output, hidden = self.gru(output, hidden)
 
         output = F.log_softmax(self.out(output[0]), dim=1)
@@ -267,8 +276,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_attn_collated_stacked.pth")
-            torch.save(decoder.state_dict(), "decoder_attn_collated_stacked.pth")
+            torch.save(encoder.state_dict(), "encoder_attn_3_sentence.pth")
+            torch.save(decoder.state_dict(), "encoder_attn_3_sentence.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 
