@@ -6,6 +6,7 @@ import re
 import random
 import contractions
 import nltk
+nltk.download('punkt')
 import torch
 import torch.nn as nn
 from torch import optim
@@ -74,8 +75,10 @@ def read_data_and_vocab():
     vocab = Vocabulary()
     
     data = []
-    collated_df = pd.read_json('./training_data.json')
-
+    collated_df = pd.read_json('../../collated_full.json')
+    collated_df = collated_df[collated_df["source"] != "The New York Times"]
+    #collated_df = pd.read_json('training_data.json')
+    print(f"Total Row Count : {len(collated_df.index)}")
     for index, row in collated_df.iterrows():
 
         text = row["text"]
@@ -101,6 +104,7 @@ def read_data_and_vocab():
 
 
 data , VOCAB_MODEL = read_data_and_vocab()
+print(f"Total Training Examples: {len(data)}")
 
 data_train = data
 data_test = data
@@ -276,8 +280,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_attn_3_sentence.pth")
-            torch.save(decoder.state_dict(), "encoder_attn_3_sentence.pth")
+            torch.save(encoder.state_dict(), "encoder_attn_3_sentence_full_256.pth")
+            torch.save(decoder.state_dict(), "decoder_attn_3_sentence_full_256.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 
@@ -371,7 +375,7 @@ def evaluateRandomly(encoder, decoder, n=10):
         print('')
 
 
-hidden_size = 128
+hidden_size = 256
 encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 attn_decoder1 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
 #attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
@@ -383,8 +387,8 @@ print("COMMENSING TRAINING")
 #encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 #attn_decoder2 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
 #attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
-encoder1.load_state_dict(torch.load('encoder_attn_collated_stacked.pth'))
-attn_decoder1.load_state_dict(torch.load('decoder_attn_collated_stacked.pth'))
+#encoder1.load_state_dict(torch.load('encoder_attn_3_sentence_full_256.pth'))
+#attn_decoder1.load_state_dict(torch.load('decoder_attn_3_sentence_full_256.pth'))
 
-trainIters(encoder1, attn_decoder1, 50000, print_every=100)
+trainIters(encoder1, attn_decoder1, 1000000, print_every=100)
 evaluateRandomly(encoder1, attn_decoder1)
