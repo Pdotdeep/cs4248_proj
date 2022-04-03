@@ -31,7 +31,7 @@ SOS_token = 0
 EOS_token = 1
 
 
-MAX_LENGTH = 200
+MAX_LENGTH = 300
 
 
 class Vocabulary:
@@ -52,7 +52,7 @@ class Vocabulary:
                 self.word2count[word] += 1
 
     def sentence_to_indexes(self, sentence):
-        indexes = [self.word2index[word] for word in sentence.split(' ')]
+        indexes = [self.word2index[word] for word in sentence.split(' ') if word in self.word2index]
         indexes.append(EOS_token)
         return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
 
@@ -69,12 +69,12 @@ def preprocessString(text):
     text = re.sub(r"[^a-zA-Z.!?]+", r" ", text)
     return text
 
-def read_data_and_vocab():
+def read_data_and_vocab(path):
     print("Getting Data...")
     vocab = Vocabulary()
     
     data = []
-    collated_df = pd.read_json('./training_data.json')
+    collated_df = pd.read_json(path)
 
     for index, row in collated_df.iterrows():
 
