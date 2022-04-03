@@ -277,7 +277,7 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
                                          iter, iter / n_iters * 100, print_loss_avg))
 
             torch.save(encoder.state_dict(), "encoder_attn_3_sentence.pth")
-            torch.save(decoder.state_dict(), "encoder_attn_3_sentence.pth")
+            torch.save(decoder.state_dict(), "decoder_attn_3_sentence.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 
