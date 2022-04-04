@@ -69,12 +69,15 @@ def preprocessString(text):
     text = re.sub(r"[^a-zA-Z.!?]+", r" ", text)
     return text
 
-def read_data_and_vocab(path):
+def read_data_and_vocab(path , filter_d=True):
     print("Getting Data...")
     vocab = Vocabulary()
     
     data = []
     collated_df = pd.read_json(path)
+    # collated_df = pd.read_json('../../collated_full.json')
+    if(filter_d):
+        collated_df = collated_df[collated_df["source"] != "The New York Times"]
 
     for index, row in collated_df.iterrows():
 
@@ -101,8 +104,8 @@ def read_data_and_vocab(path):
 
 
 
-_ , VOCAB_MODEL = read_data_and_vocab('./training_data.json')
-data , _ = read_data_and_vocab('./testing_data.json')
+_ , VOCAB_MODEL = read_data_and_vocab('../../collated_full.json' , filter_d = True)
+data , _ = read_data_and_vocab('./testing_data.json', filter_d = False)
 
 
 
@@ -231,10 +234,10 @@ def evaluateRandomly(encoder, decoder, n=10):
         print('')
 
 
-hidden_size = 128
+hidden_size = 256
 encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 attn_decoder1 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
-encoder1.load_state_dict(torch.load('encoder_attn_3_sentence.pth'))
-attn_decoder1.load_state_dict(torch.load('decoder_attn_3_sentence.pth'))
+encoder1.load_state_dict(torch.load('encoder_attn_tf_256_1.pth'))
+attn_decoder1.load_state_dict(torch.load('decoder_attn_tf_256_1.pth'))
 
 evaluateRandomly(encoder1, attn_decoder1)
