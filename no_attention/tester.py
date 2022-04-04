@@ -280,6 +280,19 @@ def evaluateRandomly(encoder, decoder, n=10):
         output_sentence = ' '.join(output_words)
         print('<', output_sentence)
         print('')
+        
+def get_title(encoder, decoder, text):
+    output_words = evaluate_no_attn(encoder, decoder, text)
+    output_sentence = ' '.join(output_words)
+    return output_sentence
+
+def write_df(df):
+    import os
+
+    if not os.path.exists('../output'):
+        os.makedirs('../output')
+
+    df.to_json(f"../output/generated_{__file__}.json")
 
 
 hidden_size = 256
@@ -291,4 +304,10 @@ attn_decoder1.load_state_dict(torch.load('decoder_no_attn_3_.pth'))
 
 evaluateRandomly(encoder1, attn_decoder1)
 
+# Generate predictions
+df = pd.DataFrame(data, columns=["Text", "Actual"]) # Converts data into dataframe
+df["Generated"] = df["Text"].apply(lambda text: get_title(encoder1, attn_decoder1, text))
+# df = df.drop("Text", axis=1)
+# Save file
+write_df(df)
 
