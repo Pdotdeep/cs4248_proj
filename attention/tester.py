@@ -233,6 +233,18 @@ def evaluateRandomly(encoder, decoder, n=10):
         print('<', output_sentence)
         print('')
 
+def get_title(encoder, decoder, text):
+    output_words, attentions = evaluate(encoder, decoder, text)
+    output_sentence = ' '.join(output_words)
+    return output_sentence
+
+def write_df(df):
+    import os
+
+    if not os.path.exists('../output'):
+        os.makedirs('../output')
+
+    df.to_json(f"../output/generated_{__file__}.json")
 
 hidden_size = 256
 encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
@@ -241,3 +253,10 @@ encoder1.load_state_dict(torch.load('encoder_attn_tf_256_1.pth'))
 attn_decoder1.load_state_dict(torch.load('decoder_attn_tf_256_1.pth'))
 
 evaluateRandomly(encoder1, attn_decoder1)
+
+# Generate predictions
+df = pd.DataFrame(data, columns=["Text", "Actual"]) # Converts data into dataframe
+df["Generated"] = df["Text"].apply(lambda text: get_title(encoder1, attn_decoder1, text))
+# df = df.drop("Text", axis=1)
+# Save file
+write_df(df)
