@@ -5,7 +5,7 @@ from rouge import Rouge
 import statistics
 import sys
 
-def evaluate(data):
+def evaluate(name, data):
 
   text = list(data["Text"].values())
   generated = list(data["Generated"].values())
@@ -62,4 +62,4 @@ for path in generated_path:
 
   # Write individual scores to file
   name = path.split("/")[-1].split(".")[0]
-  results = evaluate(data)
+  results = evaluate(name, data)
