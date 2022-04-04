@@ -359,8 +359,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_no_attn_collated.pth")
-            torch.save(decoder.state_dict(), "decoder_no_attn_collated.pth")
+            torch.save(encoder.state_dict(), "encoder_no_attn_3.pth")
+            torch.save(decoder.state_dict(), "decoder_no_attn_3.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 
@@ -476,14 +476,14 @@ encoder1 = EncoderRNN(lang_model.n_words, hidden_size).to(device)
 #attn_decoder1 = AttnDecoderRNN(hidden_size, lang_model.n_words, dropout_p=0.1).to(device)
 attn_decoder1 = DecoderRNN(hidden_size, lang_model.n_words).to(device)
 print("COMMENSING TRAINING")
-trainIters(encoder1, attn_decoder1, 50000, print_every=100)
+trainIters(encoder1, attn_decoder1, 100000, print_every=100)
 
 
 #
 #encoder1 = EncoderRNN(lang_model.n_words, hidden_size).to(device)
 #attn_decoder2 = AttnDecoderRNN(hidden_size, lang_model.n_words, dropout_p=0.1).to(device)
 #attn_decoder1 = DecoderRNN(hidden_size, lang_model.n_words).to(device)
-#encoder1.load_state_dict(torch.load('encoder_no_attn_collated.pth'))
-#attn_decoder1.load_state_dict(torch.load('decoder_no_attn_collated.pth'))
+#encoder1.load_state_dict(torch.load('encoder_no_attn_3.pth'))
+#attn_decoder1.load_state_dict(torch.load('decoder_no_attn_3.pth'))
 
 evaluateRandomly(encoder1, attn_decoder1)
