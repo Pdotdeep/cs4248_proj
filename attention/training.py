@@ -281,8 +281,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_attn_tf_256_2.pth")
-            torch.save(decoder.state_dict(), "decoder_attn_tf_256_2.pth")
+            torch.save(encoder.state_dict(), "encoder_attn_tf_256_3.pth")
+            torch.save(decoder.state_dict(), "decoder_attn_tf_256_3.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 

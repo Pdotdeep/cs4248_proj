@@ -194,32 +194,14 @@ class AttnDecoderRNN(nn.Module):
         return torch.zeros(1, 1, self.hidden_size, device=device)
 
 
-
-def indexesFromSentence(lang, sentence):
-    return [lang.word2index[word] if word in lang.word2index else lang.word2index["and"] for word in sentence.split(' ')]
-
-
-def tensorFromSentence(lang, sentence):
-    indexes = indexesFromSentence(lang, sentence)
-    indexes.append(EOS_token)
-    return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
-
-
-def tensorsFromPair(pair):
-    input_tensor = tensorFromSentence(lang_model, pair[0])
-#     print(input_tensor)
-#     print(input_tensor.shape)
-    target_tensor = tensorFromSentence(lang_model, pair[1])
-    return (input_tensor, target_tensor)
-
-
 teacher_forcing_ratio = 0.5
 
 def evaluate_no_attn(encoder, decoder, sentence, max_length=MAX_LENGTH):
     with torch.no_grad():
-        input_tensor = tensorFromSentence(lang_model, sentence)
+        input_tensor = VOCAB_MODEL.sentence_to_indexes(sentence)
         input_length = input_tensor.size()[0]
         encoder_hidden = encoder.initHidden()
+
 
         encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
 
@@ -244,53 +226,53 @@ def evaluate_no_attn(encoder, decoder, sentence, max_length=MAX_LENGTH):
                 decoded_words.append('<EOS>')
                 break
             else:
-                decoded_words.append(lang_model.index2word[topi.item()])
+                decoded_words.append(VOCAB_MODEL.index2word[topi.item()])
 
             decoder_input = topi.squeeze().detach()
 
         return decoded_words
 
 
+# def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
+#     with torch.no_grad():
+#         input_tensor = tensorFromSentence(lang_model, sentence)
+#         input_length = input_tensor.size()[0]
+#         encoder_hidden = encoder.initHidden()
 
-def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
-    with torch.no_grad():
-        input_tensor = tensorFromSentence(lang_model, sentence)
-        input_length = input_tensor.size()[0]
-        encoder_hidden = encoder.initHidden()
+#         encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
 
-        encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
+#         for ei in range(input_length):
+#             encoder_output, encoder_hidden = encoder(input_tensor[ei],
+#                                                      encoder_hidden)
+#             encoder_outputs[ei] += encoder_output[0, 0]
 
-        for ei in range(input_length):
-            encoder_output, encoder_hidden = encoder(input_tensor[ei],
-                                                     encoder_hidden)
-            encoder_outputs[ei] += encoder_output[0, 0]
+#         decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
 
-        decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
+#         decoder_hidden = encoder_hidden
 
-        decoder_hidden = encoder_hidden
+#         decoded_words = []
+#         decoder_attentions = torch.zeros(max_length, max_length)
 
-        decoded_words = []
-        decoder_attentions = torch.zeros(max_length, max_length)
+#         for di in range(max_length):
+#             decoder_output, decoder_hidden, decoder_attention = decoder(
+#                 decoder_input, decoder_hidden, encoder_outputs)
+#             decoder_attentions[di] = decoder_attention.data
+#             topv, topi = decoder_output.data.topk(1)
+#             if topi.item() == EOS_token:
+#                 decoded_words.append('<EOS>')
+#                 break
+#             else:
+#                 decoded_words.append(lang_model.index2word[topi.item()])
 
-        for di in range(max_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs)
-            decoder_attentions[di] = decoder_attention.data
-            topv, topi = decoder_output.data.topk(1)
-            if topi.item() == EOS_token:
-                decoded_words.append('<EOS>')
-                break
-            else:
-                decoded_words.append(lang_model.index2word[topi.item()])
+#             decoder_input = topi.squeeze().detach()
 
-            decoder_input = topi.squeeze().detach()
+#         return decoded_words, decoder_attentions[:di + 1]
 
-        return decoded_words, decoder_attentions[:di + 1]
 
 
 def evaluateRandomly(encoder, decoder, n=10):
     for i in range(n):
-        pair = random.choice(pairs)
+        pair = random.choice(data)
         print('>', pair[0])
         print('=', pair[1])
         #output_words, attentions = evaluate(encoder, decoder, pair[0])
@@ -301,10 +283,12 @@ def evaluateRandomly(encoder, decoder, n=10):
 
 
 hidden_size = 256
-encoder2 = EncoderRNN(lang_model.n_words, hidden_size).to(device)
-#attn_decoder2 = AttnDecoderRNN(hidden_size, lang_model.n_words, dropout_p=0.1).to(device)
-attn_decoder2 = DecoderRNN(hidden_size, lang_model.n_words).to(device)
-encoder2.load_state_dict(torch.load('encoder_no_attn_collated.pth'))
-attn_decoder2.load_state_dict(torch.load('decoder_no_attn_collated.pth'))
+encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
+#attn_decoder1 = AttnDecoderRNN(hidden_size, lang_model.n_words, dropout_p=0.1).to(device)
+attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
+encoder1.load_state_dict(torch.load('encoder_no_attn_3_.pth'))
+attn_decoder1.load_state_dict(torch.load('decoder_no_attn_3_.pth'))
 
-evaluateRandomly(encoder2, attn_decoder2)
+evaluateRandomly(encoder1, attn_decoder1)
+
+
