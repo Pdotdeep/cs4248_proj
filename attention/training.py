@@ -32,7 +32,7 @@ SOS_token = 0
 EOS_token = 1
 
 
-MAX_LENGTH = 200
+MAX_LENGTH = 300
 
 
 class Vocabulary:
