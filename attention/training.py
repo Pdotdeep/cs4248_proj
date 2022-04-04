@@ -32,7 +32,7 @@ SOS_token = 0
 EOS_token = 1
 
 
-MAX_LENGTH = 200
+MAX_LENGTH = 300
 
 
 class Vocabulary:
@@ -281,8 +281,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_attn_tf_256.pth")
-            torch.save(decoder.state_dict(), "decoder_attn_tf_256.pth")
+            torch.save(encoder.state_dict(), "encoder_attn_tf_256_1.pth")
+            torch.save(decoder.state_dict(), "decoder_attn_tf_256_1.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 
@@ -391,5 +391,5 @@ print("COMMENSING TRAINING")
 #encoder1.load_state_dict(torch.load('encoder_attn_tf_256.pth'))
 #attn_decoder1.load_state_dict(torch.load('decoder_attn_tf_256.pth'))
 
-trainIters(encoder1, attn_decoder1, 1000000, print_every=100)
+trainIters(encoder1, attn_decoder1, 100000, print_every=100)
 evaluateRandomly(encoder1, attn_decoder1)
