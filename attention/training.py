@@ -253,7 +253,7 @@ def timeSince(since, percent):
     return '%s (- %s)' % (asMinutes(s), asMinutes(rs))
 
 
-def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, learning_rate=0.01):
+def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, learning_rate=0.001):
     start = time.time()
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
@@ -281,8 +281,8 @@ def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, lear
             print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
                                          iter, iter / n_iters * 100, print_loss_avg))
 
-            torch.save(encoder.state_dict(), "encoder_attn_tf_256_1.pth")
-            torch.save(decoder.state_dict(), "decoder_attn_tf_256_1.pth")
+            torch.save(encoder.state_dict(), "encoder_attn_tf_256_2.pth")
+            torch.save(decoder.state_dict(), "decoder_attn_tf_256_2.pth")
 
             evaluateRandomly(encoder, decoder , 3)
 
@@ -388,8 +388,8 @@ print("COMMENSING TRAINING")
 #encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 #attn_decoder2 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
 #attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
-#encoder1.load_state_dict(torch.load('encoder_attn_tf_256.pth'))
-#attn_decoder1.load_state_dict(torch.load('decoder_attn_tf_256.pth'))
+encoder1.load_state_dict(torch.load('encoder_attn_tf_256_2.pth'))
+attn_decoder1.load_state_dict(torch.load('decoder_attn_tf_256_2.pth'))
 
 trainIters(encoder1, attn_decoder1, 100000, print_every=100)
 evaluateRandomly(encoder1, attn_decoder1)
