@@ -4,11 +4,25 @@ import unicodedata
 import string
 import re
 import random
-
+import contractions
+import nltk
 import torch
 import torch.nn as nn
 from torch import optim
 import torch.nn.functional as F
+import pandas as pd
+import json
+import math
+
+
+import time
+import math
+
+
+import matplotlib.pyplot as plt
+plt.switch_backend('agg')
+import matplotlib.ticker as ticker
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -17,129 +31,84 @@ SOS_token = 0
 EOS_token = 1
 
 
-class Lang:
-    def __init__(self, name):
-        self.name = name
+MAX_LENGTH = 300
+
+
+class Vocabulary:
+    def __init__(self):
         self.word2index = {}
         self.word2count = {}
         self.index2word = {0: "SOS", 1: "EOS"}
         self.n_words = 2  # Count SOS and EOS
 
-    def addSentence(self, sentence):
+    def add_to_vocab(self, sentence):
         for word in sentence.split(' '):
-            self.addWord(word)
+            if word not in self.word2index:
+                self.word2index[word] = self.n_words
+                self.word2count[word] = 1
+                self.index2word[self.n_words] = word
+                self.n_words += 1
+            else:
+                self.word2count[word] += 1
 
-    def addWord(self, word):
-        if word not in self.word2index:
-            self.word2index[word] = self.n_words
-            self.word2count[word] = 1
-            self.index2word[self.n_words] = word
-            self.n_words += 1
-        else:
-            self.word2count[word] += 1
+    def sentence_to_indexes(self, sentence):
+        indexes = [self.word2index[word] for word in sentence.split(' ') if word in self.word2index]
+        indexes.append(EOS_token)
+        return torch.tensor(indexes, dtype=torch.long, device=device).view(-1, 1)
+
+    def get_tensor_for_data(self, pair):
+        input_tensor = self.sentence_to_indexes(pair[0])
+        target_tensor = self.sentence_to_indexes(pair[1])
+        return (input_tensor, target_tensor)
 
 
-# Turn a Unicode string to plain ASCII, thanks to
-# https://stackoverflow.com/a/518232/2809427
-def unicodeToAscii(s):
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', s)
-        if unicodedata.category(c) != 'Mn'
-    )
+def preprocessString(text):
+    text = text.lower().strip()
+    text = contractions.fix(text)
+    text = re.sub(r"([.!?])", r" \1", text)
+    text = re.sub(r"[^a-zA-Z.!?]+", r" ", text)
+    return text
 
-# Lowercase, trim, and remove non-letter characters
-
-import math
-def normalizeString(s):
+def read_data_and_vocab(path , filter_d=True):
+    print("Getting Data...")
+    vocab = Vocabulary()
     
-    s = unicodeToAscii(s.lower().strip())
-    s = re.sub(r"([.!?])", r" \1", s)
-    s = re.sub(r"[^a-zA-Z.!?]+", r" ", s)
-    return s
+    data = []
+    collated_df = pd.read_json(path)
+    # collated_df = pd.read_json('../../collated_full.json')
+    if(filter_d):
+        collated_df = collated_df[collated_df["source"] != "The New York Times"]
 
-
-import pandas as pd
-
-import json
-
-
-def read_news(src):
-    print("Reading lines...")
-    
-    pairs = []
-    
-    collated_df = pd.read_json(src)
-
-    print(collated_df)
-    
-    
     for index, row in collated_df.iterrows():
 
-        text = normalizeString(row["text"])
-        title = normalizeString(row["title"])
+        text = row["text"]
+        title = preprocessString(row["title"])
 
-        pairs.append([text,title])
+        sent_list = nltk.tokenize.sent_tokenize(text)
+        num_of_sentences = len(sent_list)
+        end_boundary = 3 if 3 < num_of_sentences else num_of_sentences
+        first_3_sentences = sent_list[0:end_boundary]
 
+        text = preprocessString(''.join(first_3_sentences))
 
-    return pairs
+        # print("setences: ",text)
+        # print("ORI" ,row["text"])
 
+        if(len(text.split(' ')) < MAX_LENGTH and len(title.split(' ')) < MAX_LENGTH):
+            data.append([text,title])
 
-MAX_LENGTH = 600
+            vocab.add_to_vocab(text)
+            vocab.add_to_vocab(title)
 
-eng_prefixes = (
-    "i am ", "i m ",
-    "he is", "he s ",
-    "she is", "she s ",
-    "you are", "you re ",
-    "we are", "we re ",
-    "they are", "they re "
-)
-
-
-def filterPair(p):
-    return len(p[0].split(' ')) < MAX_LENGTH and \
-        len(p[1].split(' ')) < MAX_LENGTH
-
-
-def filterPairs(pairs):
-    return [pair for pair in pairs if filterPair(pair)]
-
-
-import random
-
-def prepareData():
-    pairs = read_news('./testing_data.json')
-    print("Read %s sentence pairs" % len(pairs))
-    pairs = filterPairs(pairs)
-    print("Trimmed to %s sentence pairs" % len(pairs))
-    print("Counting words...")
-    lang_model = Lang("english")
-    for pair in pairs:
-        lang_model.addSentence(pair[0])
-        lang_model.addSentence(pair[1])
-    print("Counted words:")
-    print(lang_model.name, lang_model.n_words)
-    return lang_model, pairs
-
-def prepareLangModel():
-    pairs = read_news('./training_data.json')
-    print("Read %s sentence pairs" % len(pairs))
-    pairs = filterPairs(pairs)
-    print("Trimmed to %s sentence pairs" % len(pairs))
-    print("Counting words...")
-    lang_model = Lang("english")
-    for pair in pairs:
-        lang_model.addSentence(pair[0])
-        lang_model.addSentence(pair[1])
-    print("Counted words:")
-    print(lang_model.name, lang_model.n_words)
-    return lang_model, pairs
+    return data , vocab
 
 
 
+_ , VOCAB_MODEL = read_data_and_vocab('../../collated_full.json' , filter_d = True)
+data , _ = read_data_and_vocab('./testing_data.json', filter_d = False)
 
-lang_model, _ = prepareLangModel()
-_, pairs = prepareData()
+
+
 
 # random.shuffle(pairs)
 
