@@ -381,6 +381,18 @@ def evaluateRandomly(encoder, decoder, n=10):
         print('<', output_sentence)
         print('')
 
+def get_title(encoder, decoder, text):
+    output_words, attentions = evaluate(encoder, decoder, text)
+    output_sentence = ' '.join(output_words)
+    return output_sentence
+
+def write_df(df):
+    import os
+
+    if not os.path.exists('../output'):
+        os.makedirs('../output')
+
+    df.to_json(f"../output/generated_{__file__}.json")
 
 hidden_size = 256
 encoder2 = EncoderRNN(lang_model.n_words, hidden_size).to(device)
@@ -389,3 +401,10 @@ encoder2.load_state_dict(torch.load('encoder_collated.pth' , map_location=torch.
 attn_decoder2.load_state_dict(torch.load('decoder_collated.pth', map_location=torch.device('cpu')))
 
 evaluateRandomly(encoder2, attn_decoder2)
+
+# Generate predictions
+df = pd.DataFrame(data, columns=["Text", "Actual"]) # Converts data into dataframe
+df["Generated"] = df["Text"].apply(lambda text: get_title(encoder1, attn_decoder1, text))
+# df = df.drop("Text", axis=1)
+# Save file
+write_df(df)
