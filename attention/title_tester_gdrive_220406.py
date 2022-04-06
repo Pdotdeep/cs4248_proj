@@ -68,7 +68,7 @@ def read_news():
     
     pairs = []
     
-    collated_df = pd.read_json('./collated.json')
+    collated_df = pd.read_json('../data/collated_full.json')
     
     
     for index, row in collated_df.iterrows():
@@ -397,8 +397,8 @@ def write_df(df):
 hidden_size = 256
 encoder2 = EncoderRNN(lang_model.n_words, hidden_size).to(device)
 attn_decoder2 = AttnDecoderRNN(hidden_size, lang_model.n_words, dropout_p=0.1).to(device)
-encoder2.load_state_dict(torch.load('encoder_collated.pth' , map_location=torch.device('cpu')))
-attn_decoder2.load_state_dict(torch.load('decoder_collated.pth', map_location=torch.device('cpu')))
+encoder2.load_state_dict(torch.load('encoder_collated__220406.pth' , map_location=torch.device('cpu')))
+attn_decoder2.load_state_dict(torch.load('decoder_collated_220406.pth', map_location=torch.device('cpu')))
 
 evaluateRandomly(encoder2, attn_decoder2)
 
