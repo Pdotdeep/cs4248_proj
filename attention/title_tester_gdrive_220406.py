@@ -68,7 +68,7 @@ def read_news():
     
     pairs = []
     
-    collated_df = pd.read_json('../data/collated_full.json')
+    collated_df = pd.read_json('../../collated.json')
     
     
     for index, row in collated_df.iterrows():
@@ -395,16 +395,16 @@ def write_df(df):
     df.to_json(f"../output/generated_{__file__}.json")
 
 hidden_size = 256
-encoder2 = EncoderRNN(lang_model.n_words, hidden_size).to(device)
-attn_decoder2 = AttnDecoderRNN(hidden_size, lang_model.n_words, dropout_p=0.1).to(device)
-encoder2.load_state_dict(torch.load('encoder_collated__220406.pth' , map_location=torch.device('cpu')))
+encoder2 = EncoderRNN(lang_model.n_words - 9, hidden_size).to(device)
+attn_decoder2 = AttnDecoderRNN(hidden_size, lang_model.n_words - 9, dropout_p=0.1).to(device)
+encoder2.load_state_dict(torch.load('encoder_collated_220406.pth' , map_location=torch.device('cpu')))
 attn_decoder2.load_state_dict(torch.load('decoder_collated_220406.pth', map_location=torch.device('cpu')))
 
-evaluateRandomly(encoder2, attn_decoder2)
+# evaluateRandomly(encoder2, attn_decoder2)
 
 # Generate predictions
-df = pd.DataFrame(data, columns=["Text", "Actual"]) # Converts data into dataframe
-df["Generated"] = df["Text"].apply(lambda text: get_title(encoder1, attn_decoder1, text))
+df = pd.DataFrame(pairs, columns=["Text", "Actual"]) # Converts data into dataframe
+df["Generated"] = df["Text"].apply(lambda text: get_title(encoder2, attn_decoder2, text))
 # df = df.drop("Text", axis=1)
 # Save file
 write_df(df)
