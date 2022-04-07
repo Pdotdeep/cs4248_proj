@@ -19,6 +19,7 @@ import math
 import time
 import math
 
+import copy
 
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
@@ -76,8 +77,6 @@ def read_data_and_vocab():
     
     data = []
     collated_df = pd.read_json('../../collated_full.json')
-    collated_df = collated_df[collated_df["source"] != "The New York Times"]
-    #collated_df = pd.read_json('training_data.json')
     print(f"Total Row Count : {len(collated_df.index)}")
     for index, row in collated_df.iterrows():
 
@@ -106,8 +105,8 @@ def read_data_and_vocab():
 data , VOCAB_MODEL = read_data_and_vocab()
 print(f"Total Training Examples: {len(data)}")
 
-data_train = data
-data_test = data
+data_train = copy.deepcopy(data[0:int(len(data)*0.8)])
+data_test = copy.deepcopy(data[int(len(data)*0.8):])
 
 class EncoderRNN(nn.Module):
     def __init__(self, input_size, hidden_size):
@@ -238,93 +237,37 @@ def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, deco
     return loss.item() / target_length
 
 
-
-def asMinutes(s):
-    m = math.floor(s / 60)
-    s -= m * 60
-    return '%dm %ds' % (m, s)
-
-
-def timeSince(since, percent):
-    now = time.time()
-    s = now - since
-    es = s / (percent)
-    rs = es - s
-    return '%s (- %s)' % (asMinutes(s), asMinutes(rs))
-
-
-def trainIters(encoder, decoder, n_iters, print_every=1000, plot_every=100, learning_rate=0.001):
+def trainIters(encoder, decoder, n_iters, print_every=1000, learning_rate=0.001):
     start = time.time()
     plot_losses = []
-    print_loss_total = 0  # Reset every print_every
-    # plot_loss_total = 0  # Reset every plot_every
-
+    print_loss_total = 0
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
-    training_pairs = [VOCAB_MODEL.get_tensor_for_data(random.choice(data_train)) for i in range(n_iters)]
+    training_pairs = [VOCAB_MODEL.get_tensor_for_data(data_train[i]) for i in range(len(data_train))]
     criterion = nn.NLLLoss()
 
-    for iter in range(1, n_iters + 1):
-        training_pair = training_pairs[iter - 1]
-        input_tensor = training_pair[0]
-        target_tensor = training_pair[1]
+    for epoch_curr in range(n_iters):
 
-        loss = train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion)
-        #loss = train_no_attn(input_tensor, target_tensor, encoder,
-        #             decoder, encoder_optimizer, decoder_optimizer, criterion)
-        print_loss_total += loss
-        # plot_loss_total += loss
+        random.shuffle(training_pairs)
 
-        if iter % print_every == 0:
-            print_loss_avg = print_loss_total / print_every
-            print_loss_total = 0
-            print('%s (%d %d%%) %.4f' % (timeSince(start, iter / n_iters),
-                                         iter, iter / n_iters * 100, print_loss_avg))
+        for iter in range(len(training_pairs)):
+            training_pair = training_pairs[iter]
+            input_tensor = training_pair[0]
+            target_tensor = training_pair[1]
 
-            torch.save(encoder.state_dict(), "encoder_attn_tf_256_3.pth")
-            torch.save(decoder.state_dict(), "decoder_attn_tf_256_3.pth")
+            loss = train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion)
+            print_loss_total += loss
 
-            evaluateRandomly(encoder, decoder , 3)
+            if iter % print_every == 0:
+                print_loss_avg = print_loss_total / print_every
+                print_loss_total = 0
+                print(f'Epoch: {epoch_curr} , {iter}/{len(data_train)} Loss: {print_loss_avg}')
+                torch.save(encoder.state_dict(), "encoder_attn_tf_256_3.pth")
+                torch.save(decoder.state_dict(), "decoder_attn_tf_256_3.pth")
 
+                evaluateRandomly(encoder, decoder , 3)
 
 
-
-
-
-# def evaluate_no_attn(encoder, decoder, sentence, max_length=MAX_LENGTH):
-#     with torch.no_grad():
-#         input_tensor = VOCAB_MODEL.sentence_to_indexes(sentence)
-#         input_length = input_tensor.size()[0]
-#         encoder_hidden = encoder.initHidden()
-
-#         encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
-
-#         for ei in range(input_length):
-#             encoder_output, encoder_hidden = encoder(input_tensor[ei],
-#                                                      encoder_hidden)
-#             encoder_outputs[ei] += encoder_output[0, 0]
-
-#         decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
-
-#         decoder_hidden = encoder_hidden
-
-#         decoded_words = []
-#         decoder_attentions = torch.zeros(max_length, max_length)
-
-#         for di in range(max_length):
-#             decoder_output, decoder_hidden = decoder(
-#                 decoder_input, decoder_hidden)
-#             #decoder_attentions[di] = decoder_attention.data
-#             topv, topi = decoder_output.data.topk(1)
-#             if topi.item() == EOS_token:
-#                 decoded_words.append('<EOS>')
-#                 break
-#             else:
-#                 decoded_words.append(VOCAB_MODEL.index2word[topi.item()])
-
-#             decoder_input = topi.squeeze().detach()
-
-#         return decoded_words
 
 
 def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
@@ -336,8 +279,7 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LENGTH):
         encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=device)
 
         for ei in range(input_length):
-            encoder_output, encoder_hidden = encoder(input_tensor[ei],
-                                                     encoder_hidden)
+            encoder_output, encoder_hidden = encoder(input_tensor[ei],encoder_hidden)
             encoder_outputs[ei] += encoder_output[0, 0]
 
         decoder_input = torch.tensor([[SOS_token]], device=device)  # SOS
@@ -379,17 +321,11 @@ def evaluateRandomly(encoder, decoder, n=10):
 hidden_size = 256
 encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
 attn_decoder1 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
-#attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
 print("COMMENSING TRAINING")
-#trainIters(encoder1, attn_decoder1, 50000, print_every=100)
 
+#UNCOMMENT TO COMMENSE TRAINING  FROM CHECKPOINT
+# encoder1.load_state_dict(torch.load('encoder_attn_tf_256_2.pth'))
+# attn_decoder1.load_state_dict(torch.load('decoder_attn_tf_256_2.pth'))
 
-
-#encoder1 = EncoderRNN(VOCAB_MODEL.n_words, hidden_size).to(device)
-#attn_decoder2 = AttnDecoderRNN(hidden_size, VOCAB_MODEL.n_words, dropout_p=0.1).to(device)
-#attn_decoder1 = DecoderRNN(hidden_size, VOCAB_MODEL.n_words).to(device)
-encoder1.load_state_dict(torch.load('encoder_attn_tf_256_2.pth'))
-attn_decoder1.load_state_dict(torch.load('decoder_attn_tf_256_2.pth'))
-
-trainIters(encoder1, attn_decoder1, 100000, print_every=100)
+trainIters(encoder1, attn_decoder1, 100, print_every=100)
 evaluateRandomly(encoder1, attn_decoder1)
